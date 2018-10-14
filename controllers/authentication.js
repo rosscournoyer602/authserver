@@ -1,10 +1,13 @@
 const jwt = require('jwt-simple');
+
+// TODO - Import ability to check Postgres for existring users, will need a
+//        function that 'bcrypts' the passwords and stores them, will call it here.
 const User = require('../models/user');
-const config = require('../config');
+// const config = require('../config');
 
 function tokenForUser(user) {
     const timestamp = new Date().getTime();
-    return jwt.encode({ sub: user.id, iat: timestamp }, config.secret);
+    return jwt.encode({ sub: user.id, iat: timestamp }, process.env.secret);
 }
 
 exports.signin = function(req, res, next) {
@@ -28,7 +31,12 @@ exports.signup = function(req, res, next) {
     //make sure request is correctly formatted
     if (!email || !password) return res.status(422).send('email or password missing');
 
-    //check if email already exists
+    //make sure user is eligible to register an account
+    if (process.env.allowedUsers.indexOf(email) === -1) {
+        return res.status(422).send('user email not eligible for account')
+    }
+
+    //check if email already exists TODO Search Postgres for users
     User.findOne({ email: email}, function(err, existingUser) {
        if (err) return next(err);
        if (existingUser) return res.status(422).send( 'Email is in use');
